@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: vertex-api
+  profiles:
+    # Defaults to local. When deploying to your EC2 instance, 
+    # you will override this by passing an environment variable: SPRING_PROFILES_ACTIVE=prod
+    active: local
