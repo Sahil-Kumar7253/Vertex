@@ -1,4 +1,4 @@
-package com.vertex.vertex_api.user.model;
+package com.vertex.vertex_api.user;
 
 import java.time.LocalDateTime;
 import java.util.UUID;

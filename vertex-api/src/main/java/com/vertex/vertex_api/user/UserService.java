@@ -1,8 +1,5 @@
-package com.vertex.vertex_api.user.service;
+package com.vertex.vertex_api.user;
 
-import com.vertex.vertex_api.user.dto.UserResponseDto;
-import com.vertex.vertex_api.user.model.User;
-import com.vertex.vertex_api.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;

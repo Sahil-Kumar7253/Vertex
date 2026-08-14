@@ -1,7 +1,5 @@
-package com.vertex.vertex_api.user.controller;
+package com.vertex.vertex_api.user;
 
-import com.vertex.vertex_api.user.dto.UserResponseDto;
-import com.vertex.vertex_api.user.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
