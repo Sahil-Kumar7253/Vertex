@@ -1,6 +1,7 @@
 'use client';
 
 import {Workspace} from "@/features/workspaces/types";
+import Link from 'next/link';
 
 interface WorkspaceListProps {
     workspaces: Workspace[];
@@ -33,8 +34,8 @@ export const WorkspaceList = ({ workspaces, isLoading }: WorkspaceListProps) => 
             {/* Bounded, scrollable list section */}
             <div className="max-h-[400px] overflow-y-auto p-4 space-y-3">
                 {workspaces.map((workspace) => (
+                  <Link href={`/workspaces/${workspace.id}`} key={workspace.id} className="block">
                     <div 
-                        key={workspace.id}
                         className="p-4 border border-gray-100 rounded-lg hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer group flex items-center justify-between"
                     >
                         <div>
@@ -51,6 +52,7 @@ export const WorkspaceList = ({ workspaces, isLoading }: WorkspaceListProps) => 
                             </svg>
                         </div>
                     </div>
+                  </Link>
                 ))}
             </div>
         </div>
