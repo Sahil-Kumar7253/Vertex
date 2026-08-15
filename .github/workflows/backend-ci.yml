@@ -28,7 +28,7 @@ jobs:
         with:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
-          restore-keys: @{{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
 
       - name: Build, Test, and Analyze
         env:
