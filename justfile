@@ -1,5 +1,8 @@
 set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
 
+backendCheck:
+    cd vertex-api; ./mvnw clean verify
+
 backend:
     cd vertex-api; ./mvnw spring-boot:run
 
