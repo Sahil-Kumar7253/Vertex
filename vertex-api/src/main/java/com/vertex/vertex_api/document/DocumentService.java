@@ -42,6 +42,36 @@ public class DocumentService {
                 .collect(Collectors.toList());
     }
 
+    public DocumentResponseDto getDocumentById(UUID workspaceId, UUID documentId){
+        Document document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new RuntimeException("Document not found with ID: " + documentId));
+
+        if(!document.getWorkspace().getId().equals(workspaceId)) {
+            throw new RuntimeException("Document does not belong to this workspace");
+        }
+
+        return mapToDto(document);
+    }
+
+    public DocumentResponseDto updateDocument(UUID workspaceId, UUID documentId, DocumentRequestDto request){
+        Document document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new RuntimeException("Document not found with ID: " + documentId));
+
+        if(!document.getWorkspace().getId().equals(workspaceId)) {
+            throw new RuntimeException("Document does not belong to this workspace");
+        }
+
+        if(request.title() != null && !request.title().trim().isEmpty()) {
+            document.setTitle(request.title());
+        }
+        if(request.content() != null){
+            document.setContent(request.content());
+        }
+
+        Document updatedDocument = documentRepository.save(document);
+        return mapToDto(updatedDocument);
+    }
+
     private DocumentResponseDto mapToDto(Document document){
         return new DocumentResponseDto(
                 document.getId(),

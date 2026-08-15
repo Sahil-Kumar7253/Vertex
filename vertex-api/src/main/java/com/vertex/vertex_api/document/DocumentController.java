@@ -35,4 +35,21 @@ public class DocumentController {
         return ResponseEntity.ok(documentService.getDocumentByWorkspace(workspaceId));
     }
 
+    @GetMapping("/{documentId}")
+    public ResponseEntity<DocumentResponseDto> getDocument(
+            @PathVariable UUID workspaceId,
+            @PathVariable UUID documentId
+    ) {
+        return ResponseEntity.ok(documentService.getDocumentById(workspaceId, documentId));
+    }
+
+    @PutMapping("/{documentId}")
+    public ResponseEntity<DocumentResponseDto> updateDocument(
+            @PathVariable UUID workspaceId,
+            @PathVariable UUID documentId,
+            @RequestBody DocumentRequestDto request
+    ) {
+        return ResponseEntity.ok(documentService.updateDocument(workspaceId, documentId, request));
+    }
+
 }
