@@ -1,7 +1,6 @@
 package com.vertex.vertex_api.security;
 
 
-import org.hibernate.boot.internal.Abstract;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationProvider;
