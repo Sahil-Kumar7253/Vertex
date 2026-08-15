@@ -10,6 +10,7 @@ export const useAuth = () => {
 
     const handleAuthSuccess = (token: string) => {
         localStorage.setItem("token", token);
+        document.cookie = `token=${token}; path=/; max-age=86400; SameSite=Lax`;
         router.push("/workspaces");
     };
 
@@ -41,6 +42,7 @@ export const useAuth = () => {
 
     const logout = () => {
         localStorage.removeItem("token");
+        document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         router.push("/login");
     };
 
