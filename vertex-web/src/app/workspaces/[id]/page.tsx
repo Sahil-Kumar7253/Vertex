@@ -1,8 +1,29 @@
-import Link from 'next/link';
+'use client';
 
-export default function WorkspaceDetailsPage({ params }: { params: { id: string } }) {
-  
-  return (
+import Link from "next/link";
+import {use, useState} from "react";
+import {useDocuments} from "@/features/documents/hooks/useDocuments";
+import {CreateDocumentForm} from "@/features/documents/components/createDocumentForm";
+import {DocumentList} from "@/features/documents/components/DocumentList";
+import {DocumentRequestDto} from "@/features/documents/types";
+
+export default function WorkspacePage({params}: {params: Promise<{id: string}>}) {
+  const {id} = use(params);
+  const {documents, isLoading, error, createDocument} = useDocuments(id);
+  const [isCreating, setIsCreating] = useState(false);
+
+  const handleCreate = async (documentData: DocumentRequestDto) => {
+    setIsCreating(true);
+    try {
+      await createDocument(documentData);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  return(
     <main className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6">
       <div className="max-w-5xl mx-auto flex flex-col gap-8">
         
@@ -16,26 +37,29 @@ export default function WorkspaceDetailsPage({ params }: { params: { id: string 
               <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
           </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Workspace View</h1>
-            <p className="text-sm text-gray-500 font-mono mt-1">ID: {params.id}</p>
+          <div className="flex-1 flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Workspace View</h1>
+              <p className="text-sm text-gray-500 font-mono mt-1">ID: {id}</p>
+            </div>
+            
+            {/* Inline Creation Form */}
+            <div className="w-96">
+              <CreateDocumentForm onCreate={handleCreate} isLoading={isCreating} />
+            </div>
           </div>
         </header>
 
-        {/* Placeholder for future Document list */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 flex flex-col items-center justify-center text-center">
-          <div className="h-16 w-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+        {error && (
+          <div className="p-4 text-red-700 bg-red-50 rounded-xl border border-red-200">
+            {error}
           </div>
-          <h2 className="text-xl font-semibold text-gray-900">This workspace is empty</h2>
-          <p className="text-gray-500 mt-2 max-w-md">
-            We've successfully routed into the workspace. The next step is building the backend Document entity to fill this space!
-          </p>
-        </div>
+        )}
+
+        {/* Document Grid */}
+        <DocumentList documents={documents} isLoading={isLoading} workspaceId={id} />
         
       </div>
     </main>
-  );
-}
+  )
+};
