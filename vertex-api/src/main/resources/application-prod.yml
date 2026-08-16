@@ -8,16 +8,20 @@ spring:
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: false
+      ddl-auto: validate # Strictly validates the schema; it will NOT alter production tables
+    show-sql: false      # Turned off to save server resources and prevent log clutter
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
 
 application:
   security:
     jwt:
       secret-key: ${JWT_SECRET}
-      expiration: 86400000
+      expiration: ${JWT_EXPIRATION:86400000}
 
 cors:
   allowed-origin: ${FRONTEND_URL}
