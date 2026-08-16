@@ -1,18 +1,23 @@
+server:
+  # Render dynamically assigns a port; we capture it here
+  port: ${PORT:8080}
+
 spring:
   datasource:
-    # These variables will be pulled from your production server's environment
-    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
-    driver-class-name: org.postgresql.Driver
-  
+    # These map to the Aiven credentials you will put in Render
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
   jpa:
     hibernate:
-      ddl-auto: validate # Strictly validates the schema; it will NOT alter production tables
-    show-sql: false      # Turned off to save server resources and prevent log clutter
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+      ddl-auto: update
+    show-sql: false
 
-server:
-  port: 8080
+application:
+  security:
+    jwt:
+      secret-key: ${JWT_SECRET}
+      expiration: 86400000
+
+cors:
+  allowed-origin: ${FRONTEND_URL}
