@@ -52,3 +52,15 @@ Ensure you have the following installed on your system (tested on Ubuntu/Linux e
 
 ## Architecture Highlights
 The application leverages Next.js for initial server-side rendering to optimize performance and SEO. The frontend seamlessly connects to a highly concurrent Spring Boot backend via STOMP over WebSockets for real-time updates. Spring Data JPA acts as the bridge to the PostgreSQL container, ensuring type-safe, object-relational mapping and secure database queries.
+
+## Deployment
+
+### Local Development with Docker Compose
+See the local setup instructions above for Docker-based development.
+
+### Production Deployment on Render.com
+For deploying the application to production on Render.com, please refer to the comprehensive guide:
+- **[Render Deployment Guide](documentation/RENDER_DEPLOYMENT.md)** - Step-by-step instructions for deploying both frontend and backend on Render
+
+### Traditional Server Deployment
+See the [Deployment Guide](documentation/DEPLOYMENT_GUIDE.md) for EC2/self-hosted deployment instructions.
