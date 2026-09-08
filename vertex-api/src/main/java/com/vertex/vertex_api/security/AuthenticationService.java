@@ -29,46 +29,63 @@ public class AuthenticationService {
 
     public AuthResponseDto register(RegisterRequestDto request){
         log.info("Auth register flow started for email='{}'", request.email());
-        if(repository.findByEmail(request.email()).isPresent()){
-            log.warn("Auth register rejected: email already in use for email='{}'", request.email());
-            throw  new RuntimeException("Email already in use");
+        try {
+            if(repository.findByEmail(request.email()).isPresent()){
+                log.warn("Auth register rejected: email already in use for email='{}'", request.email());
+                throw  new RuntimeException("Email already in use");
+            }
+            log.debug("Auth register: email check passed for email='{}'", request.email());
+
+            User user = new User(
+                    request.email(),
+                    passwordEncoder.encode(request.password()),
+                    request.name()
+            );
+            log.debug("Auth register: User object created for email='{}'", request.email());
+
+            repository.save(user);
+            log.info("Auth register user saved successfully: userId={}, email='{}'", user.getId(), user.getEmail());
+
+            String jetToken = jwtUtil.generateToken(user);
+            log.info("Auth register token generated successfully for userId={}, email='{}'", user.getId(), user.getEmail());
+
+            UserResponseDto userDto = new UserResponseDto(user.getId(), user.getEmail(), user.getName(), user.getCreatedAt());
+            log.info("Auth register completed successfully for email='{}'", user.getEmail());
+
+            return new AuthResponseDto(jetToken, userDto);
+        } catch (Exception e) {
+            log.error("Auth register failed for email='{}': {} - {}", request.email(), e.getClass().getSimpleName(), e.getMessage(), e);
+            throw e;
         }
-
-        User user = new User(
-                request.email(),
-                passwordEncoder.encode(request.password()),
-                request.name()
-        );
-
-        repository.save(user);
-        log.info("Auth register user saved successfully: userId={}, email='{}'", user.getId(), user.getEmail());
-
-        String jetToken = jwtUtil.generateToken(user);
-        log.info("Auth register token generated successfully for userId={}, email='{}'", user.getId(), user.getEmail());
-
-        UserResponseDto userDto = new UserResponseDto(user.getId(), user.getEmail(), user.getName(), user.getCreatedAt());
-
-        return new AuthResponseDto(jetToken, userDto);
     }
 
     public AuthResponseDto authenticate(AuthRequestDto request){
         log.info("Auth login flow started for email='{}'", request.email());
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.email(),
-                        request.password()
-                )
-        );
-        log.info("Auth login credentials accepted by AuthenticationManager for email='{}'", request.email());
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.email(),
+                            request.password()
+                    )
+            );
+            log.info("Auth login credentials accepted by AuthenticationManager for email='{}'", request.email());
 
-        User user = repository.findByEmail(request.email()).orElseThrow(() -> new RuntimeException("User not found"));
-        log.info("Auth login user loaded from repository: userId={}, email='{}'", user.getId(), user.getEmail());
+            User user = repository.findByEmail(request.email()).orElseThrow(() -> {
+                log.error("Auth login user not found after successful authentication for email='{}'", request.email());
+                return new RuntimeException("User not found");
+            });
+            log.info("Auth login user loaded from repository: userId={}, email='{}'", user.getId(), user.getEmail());
 
-        String jwtToken = jwtUtil.generateToken(user);
-        log.info("Auth login token generated successfully for userId={}, email='{}'", user.getId(), user.getEmail());
+            String jwtToken = jwtUtil.generateToken(user);
+            log.info("Auth login token generated successfully for userId={}, email='{}'", user.getId(), user.getEmail());
 
-        UserResponseDto userDto = new UserResponseDto(user.getId(), user.getEmail(), user.getName(), user.getCreatedAt());
+            UserResponseDto userDto = new UserResponseDto(user.getId(), user.getEmail(), user.getName(), user.getCreatedAt());
+            log.info("Auth login completed successfully for email='{}'", user.getEmail());
 
-        return new AuthResponseDto(jwtToken, userDto);
+            return new AuthResponseDto(jwtToken, userDto);
+        } catch (Exception e) {
+            log.error("Auth login failed for email='{}': {} - {}", request.email(), e.getClass().getSimpleName(), e.getMessage(), e);
+            throw e;
+        }
     }
 }
