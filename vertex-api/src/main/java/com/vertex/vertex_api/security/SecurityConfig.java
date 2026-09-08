@@ -34,7 +34,7 @@ public class SecurityConfig {
         this.authenticationProvider = authenticationProvider;
     }
 
-    @Value("${cors.allowed-origin}")
+    @Value("${cors.allowed-origin:}")
     private String frontendUrl;
 
     @Bean
@@ -46,6 +46,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/v1/health").permitAll()
+                        .requestMatchers("/actuator/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

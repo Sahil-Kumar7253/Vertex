@@ -9,4 +9,5 @@ WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
 ENV SPRING_PROFILES_ACTIVE=prod
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENV JAVA_OPTS="-Xmx512m -Xms256m"
+ENTRYPOINT ["sh", "-c", "echo 'Starting Vertex API with profile: $SPRING_PROFILES_ACTIVE' && java $JAVA_OPTS -jar app.jar"]
