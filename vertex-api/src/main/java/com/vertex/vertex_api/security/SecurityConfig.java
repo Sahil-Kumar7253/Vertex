@@ -76,8 +76,8 @@ public class SecurityConfig {
         List<String> allowedOrigins = new ArrayList<>(List.of(
                 "http://localhost:3000",
                 "http://127.0.0.1:3000",
-                "https://*.vercel.app",
-                "https://*.onrender.com"
+                "https://.*\\.vercel\\.app",
+                "https://.*\\.onrender\\.com"
         ));
 
         if (frontendUrl != null && !frontendUrl.isBlank()) {
