@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, use } from 'react';
 import { useDocument } from '@/features/documents/hooks/useDocument';
+import { RichTextEditor } from '@/features/documents/components/RichTextEditor';
 import { useDebounce } from '@/hooks/useDebounce';
 
 export default function DocumentEditorPage({
@@ -119,13 +120,13 @@ export default function DocumentEditorPage({
           </div>
         </header>
 
-        <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-          <textarea 
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="flex-1 w-full p-8 resize-none outline-none text-gray-700 leading-relaxed"
-            placeholder="Start writing..."
-          />
+       <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+          {isInitialized && (
+            <RichTextEditor 
+              content={content} 
+              onChange={(newHtml) => setContent(newHtml)} 
+            />
+          )}
         </div>
         
       </div>
