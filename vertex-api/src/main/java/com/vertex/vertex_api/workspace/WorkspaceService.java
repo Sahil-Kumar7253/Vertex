@@ -3,8 +3,8 @@ package com.vertex.vertex_api.workspace;
 import com.vertex.vertex_api.user.User;
 import com.vertex.vertex_api.workspace.Entity.Workspace;
 import com.vertex.vertex_api.workspace.Entity.WorkspaceMember;
-import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -35,6 +35,7 @@ public class WorkspaceService {
         );
     }
 
+    @Transactional(readOnly = true)
     public List<WorkspaceResponseDto> getUserWorkspace(User user){
         return workspaceMemberRepository.findByUserId(user.getId())
                 .stream()
