@@ -17,5 +17,12 @@ public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember
             "JOIN FETCH w.owner " +
             "WHERE wm.user.id = :userId")
     List<WorkspaceMember> findByUserId(@Param("userId") UUID userId);
+
+    java.util.Optional<WorkspaceMember> findByWorkspaceIdAndUserId(UUID workspaceId, UUID userId);
+
+    boolean existsByWorkspaceIdAndUserId(UUID workspaceId, UUID userId);
+
+    @Query("SELECT wm FROM WorkspaceMember wm JOIN FETCH wm.user WHERE wm.workspace.id = :workspaceId")
+    List<WorkspaceMember> findByWorkspaceId(@Param("workspaceId") UUID workspaceId);
 }
 
