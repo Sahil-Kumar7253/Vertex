@@ -43,6 +43,7 @@ public class WorkspaceService {
     public List<WorkspaceResponseDto> getUserWorkspace(User user){
         return workspaceMemberRepository.findByUserId(user.getId())
                 .stream()
+                .filter(member -> member.getStatus() == MemberStatus.ACCEPTED)
                 .map(member -> {
                     Workspace w = member.getWorkspace();
                     return new WorkspaceResponseDto(w.getId(), w.getName(), w.getOwner().getId(), w.getCreatedAt());
@@ -76,7 +77,8 @@ public class WorkspaceService {
                 savedMember.getId(),
                 userToInvite.getId(),
                 userToInvite.getEmail(),
-                savedMember.getRole()
+                savedMember.getRole(),
+                savedMember.getStatus()
         );
     }
 
@@ -92,7 +94,8 @@ public class WorkspaceService {
                         member.getId(),
                         member.getUser().getId(),
                         member.getUser().getEmail(),
-                        member.getRole()
+                        member.getRole(),
+                        member.getStatus()
                 ))
                 .collect(Collectors.toList());
     }

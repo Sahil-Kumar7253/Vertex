@@ -6,6 +6,7 @@ public record WorkspaceMemberResponseDto(
         UUID memberId,
         UUID userId,
         String email,
-        Role role
+        Role role,
+        MemberStatus status
 ) {
 }

@@ -1,3 +1,4 @@
+export type MemberStatus = 'PENDING' | 'ACCEPTED';
 export type Role = 'ADMIN' | 'EDITOR' | 'VIEWER';
 
 export interface Workspace {
@@ -16,6 +17,7 @@ export interface WorkspaceMember {
   userId: string;
   email: string;
   role: Role;
+  status: MemberStatus;
 }
 
 export interface InviteMemberRequest {
