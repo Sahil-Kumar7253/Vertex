@@ -1,4 +1,4 @@
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import {useRouter} from "next/navigation";
 import {authApi} from "../api";
 import {loginRequestDto, registerRequestDto} from "../types";
@@ -8,9 +8,32 @@ export const useAuth = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const [user, setUser] = useState<{ id: string; email: string } | null>(null);
+
+    // 2. Helper function to decode the JWT and extract user data
+    const decodeAndSetUser = (token: string) => {
+        try {
+            const payload = token.split('.')[1];
+            const decoded = JSON.parse(atob(payload));
+            // Ensure your Spring Boot backend includes 'userId' or 'id' in the token claims!
+            setUser({ id: decoded.userId || decoded.id, email: decoded.sub });
+        } catch (e) {
+            console.error("Failed to parse token", e);
+        }
+    };
+
+    // 3. Check for token on mount
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (token) {
+            decodeAndSetUser(token);
+        }
+    }, []);
+
     const handleAuthSuccess = (token: string) => {
         localStorage.setItem("token", token);
         document.cookie = `token=${token}; path=/; max-age=86400; SameSite=Lax`;
+        decodeAndSetUser(token);
         router.push("/workspaces");
     };
 
@@ -52,5 +75,6 @@ export const useAuth = () => {
         logout,
         isLoading,
         error,
+        user,
     };
 };

@@ -75,4 +75,21 @@ public class WorkspaceController {
         return ResponseEntity.ok().build();
     }
 
+    @DeleteMapping("/{workspaceId}/leave")
+    public ResponseEntity<Void> leaveWorkspace(
+            @PathVariable UUID workspaceId,
+            @AuthenticationPrincipal User currentUser
+    ) {
+        workspaceService.leaveWorkspace(workspaceId, currentUser);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{workspaceId}")
+    public ResponseEntity<Void> deleteWorkspace(
+            @PathVariable UUID workspaceId,
+            @AuthenticationPrincipal User currentUser
+    ) {
+        workspaceService.deleteWorkspace(workspaceId, currentUser);
+        return ResponseEntity.ok().build();
+    }
 }

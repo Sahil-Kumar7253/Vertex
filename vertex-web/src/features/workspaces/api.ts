@@ -34,5 +34,15 @@ export const workspaceApi = {
     rejectInvite: async (workspaceId: string): Promise<void> => {
         await api.delete(`/workspaces/${workspaceId}/invites/reject`);
     },
+
+    // Add this inside your workspaceApi object:
+    leaveWorkspace: async (workspaceId: string): Promise<void> => {
+        await api.delete(`/workspaces/${workspaceId}/leave`);
+    },
+
+    // Add this inside your workspaceApi object:
+    deleteWorkspace: async (workspaceId: string): Promise<void> => {
+        await api.delete(`/workspaces/${workspaceId}`);
+    },
 };
 

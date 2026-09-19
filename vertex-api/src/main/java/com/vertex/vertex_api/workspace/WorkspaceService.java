@@ -1,5 +1,7 @@
 package com.vertex.vertex_api.workspace;
 
+import com.vertex.vertex_api.document.Document;
+import com.vertex.vertex_api.document.DocumentRepository;
 import com.vertex.vertex_api.user.User;
 import com.vertex.vertex_api.user.UserRepository;
 import com.vertex.vertex_api.workspace.Entity.Workspace;
@@ -7,6 +9,7 @@ import com.vertex.vertex_api.workspace.Entity.WorkspaceMember;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -16,11 +19,13 @@ public class WorkspaceService {
     private final WorkspaceRepository workspaceRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final UserRepository userRepository;
+    private final DocumentRepository documentRepository;
 
-    public WorkspaceService(WorkspaceRepository workspaceRepository, WorkspaceMemberRepository workspaceMemberRepository, UserRepository userRepository) {
+    public WorkspaceService(WorkspaceRepository workspaceRepository, WorkspaceMemberRepository workspaceMemberRepository, UserRepository userRepository, DocumentRepository documentRepository) {
         this.workspaceRepository = workspaceRepository;
         this.userRepository = userRepository;
         this.workspaceMemberRepository = workspaceMemberRepository;
+        this.documentRepository = documentRepository;
     }
 
     @Transactional
@@ -133,5 +138,48 @@ public class WorkspaceService {
         }
 
         workspaceMemberRepository.delete(pendingMember);
+    }
+
+    @Transactional
+    public void leaveWorkspace(UUID workspaceId, User currentUser) {
+        // 1. Find the workspace
+        Workspace workspace = workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new RuntimeException("Workspace not found"));
+
+        // 2. Prevent the owner from leaving
+        if (workspace.getOwner().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("The owner cannot leave the workspace. You must delete the workspace instead.");
+        }
+
+        // 3. Find the membership record
+        WorkspaceMember member = workspaceMemberRepository.findByWorkspaceIdAndUserId(workspaceId, currentUser.getId())
+                .orElseThrow(() -> new RuntimeException("You are not a member of this workspace"));
+
+        // 4. Delete the membership
+        workspaceMemberRepository.delete(member);
+    }
+
+    @Transactional
+    public void deleteWorkspace(UUID workspaceId, User currentUser) {
+        // 1. Find the workspace
+        Workspace workspace = workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new RuntimeException("Workspace not found"));
+
+        // 2. Prevent non-owners from deleting
+        if (!workspace.getOwner().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("Only the workspace owner can delete it.");
+        }
+
+        List<Document> documents = documentRepository.findByWorkspaceId(workspaceId);
+        documentRepository.deleteAll(documents);
+
+        // 3. Delete all membership records tied to this workspace first
+        List<MemberStatus> statuses = Arrays.asList(MemberStatus.values());
+        for (MemberStatus memberStatus : statuses) {
+            List<WorkspaceMember> members = workspaceMemberRepository.findByWorkspaceId(workspaceId, memberStatus);
+            workspaceMemberRepository.deleteAll(members);
+        }
+        // 4. Delete the workspace itself
+        workspaceRepository.delete(workspace);
     }
 }

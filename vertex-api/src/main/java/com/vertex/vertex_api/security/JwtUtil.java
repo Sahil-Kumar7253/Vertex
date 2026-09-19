@@ -1,5 +1,6 @@
 package com.vertex.vertex_api.security;
 
+import com.vertex.vertex_api.user.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -40,7 +41,14 @@ public class JwtUtil {
     }
 
     public String generateToken(UserDetails userDetails) {
-        return generateToken(new HashMap<>(), userDetails);
+
+        Map<String, Object> claims = new HashMap<>();
+
+        User user = (User) userDetails;
+
+        claims.put("id", user.getId());
+
+        return generateToken(claims, userDetails);
     }
 
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
