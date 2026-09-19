@@ -21,5 +21,18 @@ export const workspaceApi = {
         const response = await api.post<WorkspaceMember>(`/workspaces/${workspaceId}/members`, data);
         return response.data;
     },
+
+    getPendingInvites: async (): Promise<Workspace[]> => {
+        const response = await api.get<Workspace[]>('/workspaces/invites');
+        return response.data;
+    },
+
+    acceptInvite: async (workspaceId: string): Promise<void> => {
+        await api.post(`/workspaces/${workspaceId}/invites/accept`);
+    },
+
+    rejectInvite: async (workspaceId: string): Promise<void> => {
+        await api.delete(`/workspaces/${workspaceId}/invites/reject`);
+    },
 };
 

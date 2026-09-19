@@ -86,7 +86,7 @@ public class WorkspaceService {
             throw new RuntimeException("Access denied");
         }
 
-        return workspaceMemberRepository.findByWorkspaceId(workspaceId)
+        return workspaceMemberRepository.findByWorkspaceId(workspaceId, MemberStatus.ACCEPTED)
                 .stream()
                 .map(member -> new WorkspaceMemberResponseDto(
                         member.getId(),
@@ -99,7 +99,7 @@ public class WorkspaceService {
 
     @Transactional(readOnly = true)
     public List<WorkspaceResponseDto> getPendingInvites(User user) {
-        return workspaceMemberRepository.findPendingInvitesByUserId(user.getId())
+        return workspaceMemberRepository.findPendingInvitesByUserId(user.getId(), MemberStatus.PENDING)
                 .stream()
                 .map(member -> {
                     Workspace w = member.getWorkspace();

@@ -34,12 +34,18 @@ public class WorkspaceMember {
     @Column(name = "status", nullable = false)
     private MemberStatus status;
 
-    public WorkspaceMember(Workspace workspace, User userToInvite, Role role, MemberStatus pending){}
+    public WorkspaceMember() {}
+
+    public WorkspaceMember(Workspace workspace, User userToInvite, Role role, MemberStatus status) {
+        this.workspace = workspace;
+        this.user = userToInvite;
+        this.role = role;
+        this.status = status;
+    }
+
 
     public WorkspaceMember(Workspace workspace, User user, Role role) {
-        this.workspace = workspace;
-        this.user = user;
-        this.role = role;
+        this(workspace, user, role, MemberStatus.ACCEPTED);
     }
 
     public UUID getId() { return id; }

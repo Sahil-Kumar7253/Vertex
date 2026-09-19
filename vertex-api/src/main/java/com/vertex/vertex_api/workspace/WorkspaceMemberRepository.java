@@ -22,11 +22,11 @@ public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember
     @Query("SELECT wm FROM WorkspaceMember wm " +
             "JOIN FETCH wm.workspace w " +
             "JOIN FETCH w.owner " +
-            "WHERE wm.user.id = :userId AND wm.status = 'PENDING'")
-    List<WorkspaceMember> findPendingInvitesByUserId(@Param("userId") UUID userId);
+            "WHERE wm.user.id = :userId AND wm.status = :status")
+    List<WorkspaceMember> findPendingInvitesByUserId(@Param("userId") UUID userId, @Param("status") MemberStatus status);
 
-    @Query("SELECT wm FROM WorkspaceMember wm JOIN FETCH wm.user WHERE wm.workspace.id = :workspaceId AND wm.status = 'ACCEPTED'")
-    List<WorkspaceMember> findByWorkspaceId(@Param("workspaceId") UUID workspaceId);
+    @Query("SELECT wm FROM WorkspaceMember wm JOIN FETCH wm.user WHERE wm.workspace.id = :workspaceId AND wm.status = :status")
+    List<WorkspaceMember> findByWorkspaceId(@Param("workspaceId") UUID workspaceId, @Param("status") MemberStatus status);
 
     Optional<WorkspaceMember> findByWorkspaceIdAndUserId(UUID workspaceId, UUID userId);
 

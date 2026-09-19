@@ -1,17 +1,19 @@
 'use client';
 
-import {useWorkspaces} from "@/features/workspaces/hooks/useWorkspaces";
-import {CreateWorkspaceForm} from "@/features/workspaces/components/CreateWorkspaceForm";
-import {WorkspaceList} from "@/features/workspaces/components/WorkspaceList";
-import {useState} from "react";
+import { useWorkspaces } from "@/features/workspaces/hooks/useWorkspaces";
+import { CreateWorkspaceForm } from "@/features/workspaces/components/CreateWorkspaceForm";
+import { WorkspaceList } from "@/features/workspaces/components/WorkspaceList";
+import { useState } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { PendingInvitesPanel } from '@/features/workspaces/components/PendingInvitePanel';
 
 export default function WorkspacesPage() {
-    const {workspaces, isLoading, error, createWorkspace} = useWorkspaces();
-    const { logout } = useAuth();
-    const [isCreating, setIsCreating] = useState(false);
+  // 1. Destructure refreshWorkspaces (or whatever your fetch function is named in the hook)
+  const { workspaces, isLoading, error, createWorkspace, refreshWorkspaces } = useWorkspaces();
+  const { logout } = useAuth();
+  const [isCreating, setIsCreating] = useState(false);
 
-    const handleCreate = async (name: string) => {
+  const handleCreate = async (name: string) => {
     setIsCreating(true);
     try {
       await createWorkspace(name);
@@ -25,7 +27,8 @@ export default function WorkspacesPage() {
       {/* Single-column centered structure */}
       <div className="max-w-3xl mx-auto flex flex-col gap-8">
         
-        <header>
+        {/* 2. Added flex layout to the header so the Sign Out button sits cleanly on the right */}
+        <header className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <p className="mt-2 text-gray-600">Manage your projects and collaborations.</p>
@@ -43,6 +46,10 @@ export default function WorkspacesPage() {
             {error}
           </div>
         )}
+
+        {/* 3. Added the Pending Invites Panel right at the top of the content */}
+        {/* When an invite is accepted, it triggers the refresh to update your WorkspaceList */}
+        <PendingInvitesPanel onInviteAccepted={refreshWorkspaces} />
 
         {/* Stacked Layout Sections */}
         <CreateWorkspaceForm onCreate={handleCreate} isLoading={isCreating} />
