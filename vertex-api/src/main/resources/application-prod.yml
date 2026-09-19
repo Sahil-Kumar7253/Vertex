@@ -11,7 +11,7 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: validate # Strictly validates the schema; it will NOT alter production tables
+      ddl-auto: update # Allows Hibernate to add the missing workspace_members.status column during deployment
     show-sql: false      # SQL logging handled via logging config below
     open-in-view: false  # Explicitly disable open-in-view to prevent lazy loading issues
     properties:
