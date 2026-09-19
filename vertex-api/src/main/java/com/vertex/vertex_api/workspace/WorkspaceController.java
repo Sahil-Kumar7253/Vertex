@@ -49,4 +49,30 @@ public class WorkspaceController {
     ) {
         return ResponseEntity.ok(workspaceService.getWorkspaceMembers(workspaceId, currentUser));
     }
+
+    @GetMapping("/invites")
+    public ResponseEntity<List<WorkspaceResponseDto>> getPendingInvites(
+            @AuthenticationPrincipal User currentUser
+    ) {
+        return ResponseEntity.ok(workspaceService.getPendingInvites(currentUser));
+    }
+
+    @PostMapping("/{workspaceId}/invites/accept")
+    public ResponseEntity<Void> acceptInvite(
+            @PathVariable UUID workspaceId,
+            @AuthenticationPrincipal User currentUser
+    ) {
+        workspaceService.acceptInvite(workspaceId, currentUser);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{workspaceId}/invites/reject")
+    public ResponseEntity<Void> rejectInvite(
+            @PathVariable UUID workspaceId,
+            @AuthenticationPrincipal User currentUser
+    ) {
+        workspaceService.rejectInvite(workspaceId, currentUser);
+        return ResponseEntity.ok().build();
+    }
+
 }

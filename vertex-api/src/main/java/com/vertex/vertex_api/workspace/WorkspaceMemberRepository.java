@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -18,11 +19,17 @@ public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember
             "WHERE wm.user.id = :userId")
     List<WorkspaceMember> findByUserId(@Param("userId") UUID userId);
 
-    java.util.Optional<WorkspaceMember> findByWorkspaceIdAndUserId(UUID workspaceId, UUID userId);
+    @Query("SELECT wm FROM WorkspaceMember wm " +
+            "JOIN FETCH wm.workspace w " +
+            "JOIN FETCH w.owner " +
+            "WHERE wm.user.id = :userId AND wm.status = 'PENDING'")
+    List<WorkspaceMember> findPendingInvitesByUserId(@Param("userId") UUID userId);
+
+    @Query("SELECT wm FROM WorkspaceMember wm JOIN FETCH wm.user WHERE wm.workspace.id = :workspaceId AND wm.status = 'ACCEPTED'")
+    List<WorkspaceMember> findByWorkspaceId(@Param("workspaceId") UUID workspaceId);
+
+    Optional<WorkspaceMember> findByWorkspaceIdAndUserId(UUID workspaceId, UUID userId);
 
     boolean existsByWorkspaceIdAndUserId(UUID workspaceId, UUID userId);
-
-    @Query("SELECT wm FROM WorkspaceMember wm JOIN FETCH wm.user WHERE wm.workspace.id = :workspaceId")
-    List<WorkspaceMember> findByWorkspaceId(@Param("workspaceId") UUID workspaceId);
 }
 

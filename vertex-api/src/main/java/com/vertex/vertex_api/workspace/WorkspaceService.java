@@ -28,7 +28,7 @@ public class WorkspaceService {
         Workspace workspace = new Workspace(request.name(), owner);
         Workspace savedWorkspace = workspaceRepository.save(workspace);
 
-        WorkspaceMember member = new WorkspaceMember(savedWorkspace, owner, Role.ADMIN);
+        WorkspaceMember member = new WorkspaceMember(savedWorkspace, owner, Role.ADMIN, MemberStatus.ACCEPTED);
         workspaceMemberRepository.save(member);
 
         return new WorkspaceResponseDto(
@@ -51,7 +51,6 @@ public class WorkspaceService {
 
     @Transactional
     public WorkspaceMemberResponseDto inviteMember(UUID workspaceId, MemberInviteRequestDto request, User currentUser) {
-        // 1. Verify the current user is an ADMIN of this workspace
         WorkspaceMember currentMember = workspaceMemberRepository.findByWorkspaceIdAndUserId(workspaceId, currentUser.getId())
                 .orElseThrow(() -> new RuntimeException("You are not a member of this workspace"));
 
@@ -59,39 +58,34 @@ public class WorkspaceService {
             throw new RuntimeException("Only workspace ADMINs can invite new members");
         }
 
-        // 2. Find the workspace
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new RuntimeException("Workspace not found"));
 
-        // 3. Find the user being invited
         User userToInvite = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new RuntimeException("User with this email does not exist"));
 
-        // 4. Check if they are already in the workspace
         if (workspaceMemberRepository.existsByWorkspaceIdAndUserId(workspaceId, userToInvite.getId())) {
-            throw new RuntimeException("User is already a member of this workspace");
+            throw new RuntimeException("User is already in this workspace or has a pending invite");
         }
 
-        // 5. Create and save the new member
-        WorkspaceMember newMember = new WorkspaceMember(workspace, userToInvite, request.role());
+        // Invited members start as PENDING
+        WorkspaceMember newMember = new WorkspaceMember(workspace, userToInvite, request.role(), MemberStatus.PENDING);
         WorkspaceMember savedMember = workspaceMemberRepository.save(newMember);
 
         return new WorkspaceMemberResponseDto(
                 savedMember.getId(),
                 userToInvite.getId(),
-                userToInvite.getEmail(), // Assuming your User entity has getEmail()
+                userToInvite.getEmail(),
                 savedMember.getRole()
         );
     }
 
     @Transactional(readOnly = true)
     public List<WorkspaceMemberResponseDto> getWorkspaceMembers(UUID workspaceId, User currentUser) {
-        // 1. Verify the current user is actually in this workspace before revealing members
         if (!workspaceMemberRepository.existsByWorkspaceIdAndUserId(workspaceId, currentUser.getId())) {
             throw new RuntimeException("Access denied");
         }
 
-        // 2. Fetch and map members
         return workspaceMemberRepository.findByWorkspaceId(workspaceId)
                 .stream()
                 .map(member -> new WorkspaceMemberResponseDto(
@@ -101,5 +95,40 @@ public class WorkspaceService {
                         member.getRole()
                 ))
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<WorkspaceResponseDto> getPendingInvites(User user) {
+        return workspaceMemberRepository.findPendingInvitesByUserId(user.getId())
+                .stream()
+                .map(member -> {
+                    Workspace w = member.getWorkspace();
+                    return new WorkspaceResponseDto(w.getId(), w.getName(), w.getOwner().getId(), w.getCreatedAt());
+                }).collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void acceptInvite(UUID workspaceId, User user) {
+        WorkspaceMember pendingMember = workspaceMemberRepository.findByWorkspaceIdAndUserId(workspaceId, user.getId())
+                .orElseThrow(() -> new RuntimeException("Invite not found"));
+
+        if (pendingMember.getStatus() == MemberStatus.ACCEPTED) {
+            throw new RuntimeException("Invite already accepted");
+        }
+
+        pendingMember.setStatus(MemberStatus.ACCEPTED);
+        workspaceMemberRepository.save(pendingMember);
+    }
+
+    @Transactional
+    public void rejectInvite(UUID workspaceId, User user) {
+        WorkspaceMember pendingMember = workspaceMemberRepository.findByWorkspaceIdAndUserId(workspaceId, user.getId())
+                .orElseThrow(() -> new RuntimeException("Invite not found"));
+
+        if (pendingMember.getStatus() == MemberStatus.ACCEPTED) {
+            throw new RuntimeException("Cannot reject an already accepted invite. You must leave the workspace instead.");
+        }
+
+        workspaceMemberRepository.delete(pendingMember);
     }
 }

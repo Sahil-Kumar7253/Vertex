@@ -2,6 +2,7 @@ package com.vertex.vertex_api.workspace.Entity;
 
 
 import com.vertex.vertex_api.user.User;
+import com.vertex.vertex_api.workspace.MemberStatus;
 import com.vertex.vertex_api.workspace.Role;
 import jakarta.persistence.*;
 
@@ -29,7 +30,11 @@ public class WorkspaceMember {
     @Column(name = "role", nullable = false)
     private Role role;
 
-    public WorkspaceMember(){}
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private MemberStatus status;
+
+    public WorkspaceMember(Workspace workspace, User userToInvite, Role role, MemberStatus pending){}
 
     public WorkspaceMember(Workspace workspace, User user, Role role) {
         this.workspace = workspace;
@@ -48,4 +53,7 @@ public class WorkspaceMember {
 
     public Role getRole() { return role; }
     public void setRole(Role role) { this.role = role; }
+
+    public MemberStatus getStatus() { return status; }
+    public void setStatus(MemberStatus status) { this.status = status; }
 }
