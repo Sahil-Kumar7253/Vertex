@@ -6,6 +6,7 @@ import {useDocuments} from "@/features/documents/hooks/useDocuments";
 import {CreateDocumentForm} from "@/features/documents/components/createDocumentForm";
 import {DocumentList} from "@/features/documents/components/DocumentList";
 import {DocumentRequestDto} from "@/features/documents/types";
+import { MembersManager } from '@/features/workspaces/components/MembersManager';
 
 export default function WorkspacePage({params}: {params: Promise<{id: string}>}) {
   const {id} = use(params);
@@ -56,8 +57,22 @@ export default function WorkspacePage({params}: {params: Promise<{id: string}>})
           </div>
         )}
 
-        {/* Document Grid */}
-        <DocumentList documents={documents} isLoading={isLoading} workspaceId={id} />
+        {/* 2-Column Layout for Dashboard */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* Main Content: Documents (Takes up 2/3 width on large screens) */}
+          <div className="lg:col-span-2 space-y-4">
+             <h2 className="text-lg font-semibold text-gray-900">Documents</h2>
+            <DocumentList documents={documents} isLoading={isLoading} workspaceId={id} />
+          </div>
+
+          {/* Sidebar: Members (Takes up 1/3 width) */}
+          <div className="space-y-4">
+             <h2 className="text-lg font-semibold text-gray-900">Team</h2>
+            <MembersManager workspaceId={id} />
+          </div>
+          
+        </div>
         
       </div>
     </main>
