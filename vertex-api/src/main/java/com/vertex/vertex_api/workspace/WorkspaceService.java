@@ -40,7 +40,8 @@ public class WorkspaceService {
                 savedWorkspace.getId(),
                 savedWorkspace.getName(),
                 owner.getId(),
-                savedWorkspace.getCreatedAt()
+                savedWorkspace.getCreatedAt(),
+                Role.ADMIN
         );
     }
 
@@ -51,7 +52,7 @@ public class WorkspaceService {
                 .filter(member -> member.getStatus() == MemberStatus.ACCEPTED)
                 .map(member -> {
                     Workspace w = member.getWorkspace();
-                    return new WorkspaceResponseDto(w.getId(), w.getName(), w.getOwner().getId(), w.getCreatedAt());
+                    return new WorkspaceResponseDto(w.getId(), w.getName(), w.getOwner().getId(), w.getCreatedAt(), member.getRole());
                 }).collect(Collectors.toList());
     }
 
@@ -111,7 +112,7 @@ public class WorkspaceService {
                 .stream()
                 .map(member -> {
                     Workspace w = member.getWorkspace();
-                    return new WorkspaceResponseDto(w.getId(), w.getName(), w.getOwner().getId(), w.getCreatedAt());
+                    return new WorkspaceResponseDto(w.getId(), w.getName(), w.getOwner().getId(), w.getCreatedAt(), member.getRole());
                 }).collect(Collectors.toList());
     }
 

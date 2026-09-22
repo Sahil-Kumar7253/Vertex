@@ -7,5 +7,6 @@ public record WorkspaceResponseDto(
         UUID id,
         String name,
         UUID ownerId,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        Role currentUserRole
 ) {}

@@ -1,13 +1,19 @@
 package com.vertex.vertex_api.document;
 
-import com.vertex.vertex_api.user.User;
-import org.apache.coyote.Response;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 import java.util.UUID;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.vertex.vertex_api.user.User;
 
 @RestController
 @RequestMapping("/api/v1/workspaces/{workspaceId}/documents")
@@ -30,26 +36,29 @@ public class DocumentController {
 
     @GetMapping
     public ResponseEntity<List<DocumentResponseDto>> getDocument(
-        @PathVariable UUID workspaceId
+        @PathVariable UUID workspaceId,
+        @AuthenticationPrincipal User currentUser
     ){
-        return ResponseEntity.ok(documentService.getDocumentByWorkspace(workspaceId));
+        return ResponseEntity.ok(documentService.getDocumentByWorkspace(workspaceId, currentUser));
     }
 
     @GetMapping("/{documentId}")
     public ResponseEntity<DocumentResponseDto> getDocument(
+            @AuthenticationPrincipal User currentUser,
             @PathVariable UUID workspaceId,
             @PathVariable UUID documentId
     ) {
-        return ResponseEntity.ok(documentService.getDocumentById(workspaceId, documentId));
+        return ResponseEntity.ok(documentService.getDocumentById(workspaceId, documentId, currentUser));
     }
 
     @PutMapping("/{documentId}")
     public ResponseEntity<DocumentResponseDto> updateDocument(
             @PathVariable UUID workspaceId,
             @PathVariable UUID documentId,
-            @RequestBody DocumentRequestDto request
+            @RequestBody DocumentRequestDto request,
+            @AuthenticationPrincipal User currentUser
     ) {
-        return ResponseEntity.ok(documentService.updateDocument(workspaceId, documentId, request));
+        return ResponseEntity.ok(documentService.updateDocument(workspaceId, documentId, request, currentUser));
     }
 
 }
