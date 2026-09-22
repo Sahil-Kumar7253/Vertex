@@ -87,15 +87,16 @@ export default function DocumentEditorPage({
     <main className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6">
       <div className="max-w-5xl mx-auto flex flex-col gap-6 h-[calc(100vh-4rem)]">
         
-        <EditorHeader 
+       <EditorHeader 
           title={title}
+          content={content} // <-- ADD THIS PROP
           onTitleChange={handleTitleChange}
           onBack={handleBack}
           canEdit={canEdit}
           isLive={isLive}
           saveStatus={saveStatus}
           activeUsers={activeUsers}
-          currentUser={user} // <--- ADD THIS LINE HERE
+          currentUser={user}
         />
 
         <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
