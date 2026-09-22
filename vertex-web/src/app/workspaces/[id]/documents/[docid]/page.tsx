@@ -6,6 +6,8 @@ import { useState, useEffect, use } from 'react';
 import { useDocument } from '@/features/documents/hooks/useDocument';
 import { RichTextEditor } from '@/features/documents/components/RichTextEditor';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useAuth } from '@/features/auth/hooks/useAuth';
+import { Client } from '@stomp/stompjs'; // <--- NEW IMPORT
 
 export default function DocumentEditorPage({
   params
@@ -14,7 +16,9 @@ export default function DocumentEditorPage({
 }) {
   const router = useRouter();
   const resolvedParams = use(params);
-  const { document, isLoading, isSaving, saveDocument } = useDocument(
+  const { user } = useAuth(); // Need user ID to ignore our own broadcasts
+  
+  const { document, isLoading, saveDocument } = useDocument(
     resolvedParams.id,
     resolvedParams.docid,
   );
@@ -22,14 +26,16 @@ export default function DocumentEditorPage({
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  
-  // 2. Track if we have done our initial data load
   const [isInitialized, setIsInitialized] = useState(false);
+  
+  // WebSocket State
+  const [stompClient, setStompClient] = useState<Client | null>(null);
+  const [isLive, setIsLive] = useState(false);
 
   const debouncedTitle = useDebounce(title, 1000);
   const debouncedContent = useDebounce(content, 1000);
 
-  // Initial load: Only populate the inputs ONCE when the document first arrives
+  // Initial load
   useEffect(() => {
     if (document && !isInitialized) {
       setTitle(document.title);
@@ -38,7 +44,48 @@ export default function DocumentEditorPage({
     }
   }, [document, isInitialized]);
 
-  // The Auto-Save Effect
+  // STOMP WebSocket Connection Effect
+  useEffect(() => {
+    if (!isInitialized || !user) return;
+
+    const token = localStorage.getItem('token');
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080/ws';
+
+    const client = new Client({
+      brokerURL: wsUrl,
+      connectHeaders: {
+        Authorization: `Bearer ${token}`
+      },
+      // SockJS Fallback if raw WebSocket fails
+      // webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
+      debug: (str) => console.log('STOMP: ' + str),
+      reconnectDelay: 5000,
+      onConnect: () => {
+        setIsLive(true);
+        
+        // Subscribe to this specific document's topic
+        client.subscribe(`/topic/documents/${resolvedParams.docid}`, (message) => {
+          const payload = JSON.parse(message.body);
+          
+          // Only update UI if the message came from someone else!
+          if (payload.senderId !== user.id) {
+            if (payload.title !== undefined) setTitle(payload.title);
+            if (payload.content !== undefined) setContent(payload.content);
+          }
+        });
+      },
+      onDisconnect: () => setIsLive(false)
+    });
+
+    client.activate();
+    setStompClient(client);
+
+    return () => {
+      client.deactivate();
+    };
+  }, [isInitialized, resolvedParams.docid, user]);
+
+  // The DB Auto-Save Effect (Preserved exactly as you had it)
   useEffect(() => {
     if (!document || !isInitialized) return;
     if (debouncedTitle === document.title && debouncedContent === document.content) return;
@@ -58,15 +105,26 @@ export default function DocumentEditorPage({
     performAutoSave();
   }, [debouncedTitle, debouncedContent, document, saveDocument, isInitialized]);
 
-  // 3. Intercept the Back button to force an immediate save if needed
   const handleBack = async () => {
-    // If the current inputs don't match the database, save immediately!
     if (document && (title !== document.title || content !== document.content)) {
       setSaveStatus('saving');
-      await saveDocument({ title, content }); // Use the raw title/content, not debounced
+      await saveDocument({ title, content }); 
     }
-    // Navigate back safely
     router.push(`/workspaces/${resolvedParams.id}`);
+  };
+
+  // Helper to publish changes out to teammates
+  const broadcastChange = (newTitle: string, newContent: string) => {
+    if (stompClient && stompClient.connected && user) {
+      stompClient.publish({
+        destination: `/app/documents/${resolvedParams.docid}/edit`,
+        body: JSON.stringify({
+          title: newTitle,
+          content: newContent,
+          senderId: user.id
+        })
+      });
+    }
   };
 
   if (isLoading) {
@@ -83,7 +141,6 @@ export default function DocumentEditorPage({
         
         <header className="flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-gray-100">
           <div className="flex items-center gap-4">
-            {/* Replaced the Next.js <Link> with a button that triggers our new logic */}
             <button 
               onClick={handleBack}
               className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
@@ -97,14 +154,31 @@ export default function DocumentEditorPage({
               <input 
                 type="text" 
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => {
+                  const newTitle = e.target.value;
+                  setTitle(newTitle);
+                  broadcastChange(newTitle, content);
+                }}
                 className="text-xl font-bold text-gray-900 bg-transparent outline-none border-b border-transparent hover:border-gray-300 focus:border-blue-500 transition-colors px-1"
                 placeholder="Document Title"
               />
             </div>
           </div>
           
-          <div className="px-4 py-2 text-sm font-medium flex items-center gap-2 text-gray-500">
+          <div className="px-4 py-2 text-sm font-medium flex items-center gap-4 text-gray-500">
+            {/* Live Indicator */}
+            {isLive ? (
+              <span className="flex items-center gap-2 text-green-600 bg-green-50 px-2 py-1 rounded-full text-xs border border-green-200">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                Live
+              </span>
+            ) : (
+              <span className="flex items-center gap-2 text-gray-400 bg-gray-50 px-2 py-1 rounded-full text-xs border border-gray-200">
+                <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
+                Offline
+              </span>
+            )}
+
             {saveStatus === 'saving' && (
                <span className="flex items-center gap-2">
                  <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
@@ -124,7 +198,10 @@ export default function DocumentEditorPage({
           {isInitialized && (
             <RichTextEditor 
               content={content} 
-              onChange={(newHtml) => setContent(newHtml)} 
+              onChange={(newHtml) => {
+                setContent(newHtml);
+                broadcastChange(title, newHtml);
+              }} 
             />
           )}
         </div>

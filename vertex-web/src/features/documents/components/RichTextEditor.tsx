@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 
@@ -76,6 +77,21 @@ export const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
       },
     },
   });
+
+  // Listen for external WebSocket changes
+  useEffect(() => {
+    // If the incoming WebSocket content is different than what we have locally...
+    if (editor && content !== editor.getHTML()) {
+      // 1. Save the user's current cursor position
+      const { from, to } = editor.state.selection;
+      
+      // 2. Update the content. The 'false' parameter prevents TipTap from re-emitting an 'onUpdate' event.
+      editor.commands.setContent(content, {emitUpdate:false});
+      
+      // 3. Put the cursor back exactly where the user was typing
+      editor.commands.setTextSelection({ from, to });
+    }
+  }, [content, editor]);
 
   return (
     <div className="flex flex-col h-full">
