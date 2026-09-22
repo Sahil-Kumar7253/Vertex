@@ -14,6 +14,20 @@ interface UseCollaborationProps {
   onIncomingUpdate: (title?: string, content?: string) => void;
 }
 
+const getWsUrl = () => {
+  let url = process.env.NEXT_PUBLIC_WS_URL;
+  if (!url) {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+    const wsProtocolUrl = apiUrl.replace(/^http:/i, 'ws:').replace(/^https:/i, 'wss:');
+    const baseUrl = wsProtocolUrl.replace(/\/api(\/v1)?\/?$/, '');
+    url = `${baseUrl}/ws`;
+  }
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:' && url.startsWith('ws:')) {
+    url = url.replace(/^ws:/i, 'wss:');
+  }
+  return url;
+};
+
 export const useCollaboration = ({ documentId, user, canEdit, onIncomingUpdate }: UseCollaborationProps) => {
   const [stompClient, setStompClient] = useState<Client | null>(null);
   const [isLive, setIsLive] = useState(false);
@@ -36,7 +50,7 @@ export const useCollaboration = ({ documentId, user, canEdit, onIncomingUpdate }
     if (!user) return;
 
     const token = localStorage.getItem('token');
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080/ws';
+    const wsUrl = getWsUrl();
 
     const client = new Client({
       brokerURL: wsUrl,
