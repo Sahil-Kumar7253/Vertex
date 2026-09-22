@@ -1,14 +1,15 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect, use } from 'react';
-import { useDocument } from '@/features/documents/hooks/useDocument';
-import { RichTextEditor } from '@/features/documents/components/RichTextEditor';
-import { useDebounce } from '@/hooks/useDebounce';
+import { useState, useEffect, use, useCallback } from 'react';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useWorkspaces } from '@/features/workspaces/hooks/useWorkspaces';
-import { Client } from '@stomp/stompjs';
+import { useDocument } from '@/features/documents/hooks/useDocument';
+import { useCollaboration } from '@/features/documents/hooks/useCollaboration';
+import { useAutoSave } from '@/features/documents/hooks/useAutoSave';
+
+import { RichTextEditor } from '@/features/documents/components/RichTextEditor';
+import { EditorHeader } from '@/features/documents/components/EditorHeader';
 
 export default function DocumentEditorPage({
   params
@@ -20,28 +21,18 @@ export default function DocumentEditorPage({
   
   const { user } = useAuth();
   const { workspaces } = useWorkspaces();
-  
-  const { document, isLoading, saveDocument } = useDocument(
-    resolvedParams.id,
-    resolvedParams.docid,
-  );
+  const { document, isLoading, saveDocument } = useDocument(resolvedParams.id, resolvedParams.docid);
 
+  // Local Editor State
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [isInitialized, setIsInitialized] = useState(false);
-  
-  const [stompClient, setStompClient] = useState<Client | null>(null);
-  const [isLive, setIsLive] = useState(false);
 
-  const debouncedTitle = useDebounce(title, 1000);
-  const debouncedContent = useDebounce(content, 1000);
-
-  // Determine if the current user has write access
+  // Security Context
   const currentWorkspace = workspaces.find(w => w.id === resolvedParams.id);
   const canEdit = currentWorkspace?.currentUserRole === 'ADMIN' || currentWorkspace?.currentUserRole === 'EDITOR';
 
-  // Initial load
+  // Populate data on initial load
   useEffect(() => {
     if (document && !isInitialized) {
       setTitle(document.title);
@@ -50,86 +41,43 @@ export default function DocumentEditorPage({
     }
   }, [document, isInitialized]);
 
-  // STOMP WebSocket Connection Effect
-  useEffect(() => {
-    if (!isInitialized || !user) return;
+  // Hook 1: Collaboration & WebSockets
+  const handleIncomingUpdate = useCallback((newTitle?: string, newContent?: string) => {
+    if (newTitle !== undefined) setTitle(newTitle);
+    if (newContent !== undefined) setContent(newContent);
+  }, []);
 
-    const token = localStorage.getItem('token');
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080/ws';
+  const { isLive, activeUsers, broadcastChange } = useCollaboration({
+    documentId: resolvedParams.docid,
+    user,
+    canEdit,
+    onIncomingUpdate: handleIncomingUpdate
+  });
 
-    const client = new Client({
-      brokerURL: wsUrl,
-      connectHeaders: {
-        Authorization: `Bearer ${token}`
-      },
-      debug: (str) => console.log('STOMP: ' + str),
-      reconnectDelay: 5000,
-      onConnect: () => {
-        setIsLive(true);
-        client.subscribe(`/topic/documents/${resolvedParams.docid}`, (message) => {
-          const payload = JSON.parse(message.body);
-          if (payload.senderId !== user.id) {
-            if (payload.title !== undefined) setTitle(payload.title);
-            if (payload.content !== undefined) setContent(payload.content);
-          }
-        });
-      },
-      onDisconnect: () => setIsLive(false)
-    });
+  // Hook 2: Auto-Saving
+  const { saveStatus, forceSave } = useAutoSave({
+    document, title, content, canEdit, isInitialized, saveDocument
+  });
 
-    client.activate();
-    setStompClient(client);
-
-    return () => {
-      client.deactivate();
-    };
-  }, [isInitialized, resolvedParams.docid, user]);
-
-  // DB Auto-Save Effect (Only runs if user can Edit)
-  useEffect(() => {
-    if (!canEdit || !document || !isInitialized) return;
-    if (debouncedTitle === document.title && debouncedContent === document.content) return;
-
-    const performAutoSave = async () => {
-      setSaveStatus('saving');
-      try {
-        await saveDocument({ title: debouncedTitle, content: debouncedContent });
-        setSaveStatus('saved');
-        setTimeout(() => setSaveStatus('idle'), 2000);
-      } catch (error) {
-        console.error("Auto-save failed:", error);
-        setSaveStatus('error');
-      }
-    };
-
-    performAutoSave();
-  }, [debouncedTitle, debouncedContent, document, saveDocument, isInitialized, canEdit]);
-
+  // Handlers
   const handleBack = async () => {
-    if (canEdit && document && (title !== document.title || content !== document.content)) {
-      setSaveStatus('saving');
-      await saveDocument({ title, content }); 
-    }
+    await forceSave();
     router.push(`/workspaces/${resolvedParams.id}`);
   };
 
-  // Helper to publish changes out to teammates (Blocked if Viewer)
-  const broadcastChange = (newTitle: string, newContent: string) => {
-    if (canEdit && stompClient && stompClient.connected && user) {
-      stompClient.publish({
-        destination: `/app/documents/${resolvedParams.docid}/edit`,
-        body: JSON.stringify({
-          title: newTitle,
-          content: newContent,
-          senderId: user.id
-        })
-      });
-    }
+  const handleTitleChange = (newTitle: string) => {
+    setTitle(newTitle);
+    broadcastChange(newTitle, content);
+  };
+
+  const handleContentChange = (newContent: string) => {
+    setContent(newContent);
+    broadcastChange(title, newContent);
   };
 
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-gray-50 py-8 px-4 flex items-center justify-center">
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
         <p className="text-gray-500">Loading document...</p>
       </main>
     );
@@ -139,70 +87,23 @@ export default function DocumentEditorPage({
     <main className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6">
       <div className="max-w-5xl mx-auto flex flex-col gap-6 h-[calc(100vh-4rem)]">
         
-        <header className="flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={handleBack}
-              className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </button>
-            
-            <div>
-              <input 
-                type="text" 
-                value={title}
-                disabled={!canEdit}
-                onChange={(e) => {
-                  const newTitle = e.target.value;
-                  setTitle(newTitle);
-                  broadcastChange(newTitle, content);
-                }}
-                className="text-xl font-bold text-gray-900 bg-transparent outline-none border-b border-transparent hover:border-gray-300 focus:border-blue-500 transition-colors px-1 disabled:opacity-80 disabled:hover:border-transparent"
-                placeholder="Document Title"
-              />
-            </div>
-          </div>
-          
-          <div className="px-4 py-2 text-sm font-medium flex items-center gap-4 text-gray-500">
-            {isLive ? (
-              <span className="flex items-center gap-2 text-green-600 bg-green-50 px-2 py-1 rounded-full text-xs border border-green-200">
-                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                Live
-              </span>
-            ) : (
-              <span className="flex items-center gap-2 text-gray-400 bg-gray-50 px-2 py-1 rounded-full text-xs border border-gray-200">
-                <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
-                Offline
-              </span>
-            )}
+        <EditorHeader 
+          title={title}
+          onTitleChange={handleTitleChange}
+          onBack={handleBack}
+          canEdit={canEdit}
+          isLive={isLive}
+          saveStatus={saveStatus}
+          activeUsers={activeUsers}
+          currentUser={user} // <--- ADD THIS LINE HERE
+        />
 
-            {canEdit && saveStatus === 'saving' && (
-               <span className="flex items-center gap-2">
-                 <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
-                 Saving...
-               </span>
-            )}
-            {canEdit && saveStatus === 'saved' && (
-               <span className="flex items-center gap-2 text-green-600">
-                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                 Saved to cloud
-               </span>
-            )}
-          </div>
-        </header>
-
-       <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+        <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
           {isInitialized && (
             <RichTextEditor 
               content={content} 
               editable={canEdit}
-              onChange={(newHtml) => {
-                setContent(newHtml);
-                broadcastChange(title, newHtml);
-              }} 
+              onChange={handleContentChange} 
             />
           )}
         </div>

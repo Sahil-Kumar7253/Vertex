@@ -16,6 +16,12 @@ public class DocumentWebSocketController {
             UUID senderId
     ){}
 
+    public record PresencePayload(
+            UUID userId,
+            String email,
+            String action // Can be "JOIN", "HERE", or "LEAVE"
+    ) {}
+
     // Clients publish to: /app/documents/{documentId}/edit
     @MessageMapping("/documents/{documentId}/edit")
     // Broadcasts out to: /topic/documents/{documentId}
@@ -26,5 +32,14 @@ public class DocumentWebSocketController {
     ) {
         // The broker instantly routes this payload to all subscribers
         return updatePayload;
+    }
+
+    @MessageMapping("/documents/{documentId}/presence")
+    @SendTo("/topic/documents/{documentId}/presence")
+    public PresencePayload broadcastPresence(
+            @DestinationVariable UUID documentId,
+            @Payload PresencePayload payload
+    ) {
+        return payload;
     }
 }
