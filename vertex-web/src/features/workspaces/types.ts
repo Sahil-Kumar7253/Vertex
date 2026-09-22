@@ -6,6 +6,7 @@ export interface Workspace {
     name: string;
     ownerId: string;
     createdAt: string;
+    currentUserRole: Role;
 }
 
 export interface WorkspaceRequestDto {

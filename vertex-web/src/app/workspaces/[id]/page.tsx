@@ -39,14 +39,9 @@ export default function WorkspacePage({
 
   const currentWorkspace = workspaces.find((w) => w.id === id);
   const isOwner = currentWorkspace?.ownerId === user?.id;
-
-  console.log('Owner Debug:', {
-  user,
-  userId: user?.id,
-  currentWorkspace,
-  ownerId: currentWorkspace?.ownerId,
-  isOwner: currentWorkspace?.ownerId === user?.id,
-});
+  
+  // Security check: Only Admins and Editors can create/edit documents
+  const canEdit = currentWorkspace?.currentUserRole === 'ADMIN' || currentWorkspace?.currentUserRole === 'EDITOR';
 
   const handleCreate = async (documentData: DocumentRequestDto) => {
     setIsCreating(true);
@@ -166,13 +161,15 @@ export default function WorkspacePage({
             {/* Workspace actions */}
             <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
 
-              {/* Create document */}
-              <div className="w-full sm:w-auto">
-                <CreateDocumentForm
-                  onCreate={handleCreate}
-                  isLoading={isCreating}
-                />
-              </div>
+              {/* Create document - ONLY VISIBLE IF ADMIN OR EDITOR */}
+              {canEdit && (
+                <div className="w-full sm:w-auto">
+                  <CreateDocumentForm
+                    onCreate={handleCreate}
+                    isLoading={isCreating}
+                  />
+                </div>
+              )}
 
               {/* Leave / Delete */}
               <button

@@ -7,7 +7,8 @@ import { useDocument } from '@/features/documents/hooks/useDocument';
 import { RichTextEditor } from '@/features/documents/components/RichTextEditor';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import { Client } from '@stomp/stompjs'; // <--- NEW IMPORT
+import { useWorkspaces } from '@/features/workspaces/hooks/useWorkspaces';
+import { Client } from '@stomp/stompjs';
 
 export default function DocumentEditorPage({
   params
@@ -16,7 +17,9 @@ export default function DocumentEditorPage({
 }) {
   const router = useRouter();
   const resolvedParams = use(params);
-  const { user } = useAuth(); // Need user ID to ignore our own broadcasts
+  
+  const { user } = useAuth();
+  const { workspaces } = useWorkspaces();
   
   const { document, isLoading, saveDocument } = useDocument(
     resolvedParams.id,
@@ -28,12 +31,15 @@ export default function DocumentEditorPage({
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [isInitialized, setIsInitialized] = useState(false);
   
-  // WebSocket State
   const [stompClient, setStompClient] = useState<Client | null>(null);
   const [isLive, setIsLive] = useState(false);
 
   const debouncedTitle = useDebounce(title, 1000);
   const debouncedContent = useDebounce(content, 1000);
+
+  // Determine if the current user has write access
+  const currentWorkspace = workspaces.find(w => w.id === resolvedParams.id);
+  const canEdit = currentWorkspace?.currentUserRole === 'ADMIN' || currentWorkspace?.currentUserRole === 'EDITOR';
 
   // Initial load
   useEffect(() => {
@@ -56,18 +62,12 @@ export default function DocumentEditorPage({
       connectHeaders: {
         Authorization: `Bearer ${token}`
       },
-      // SockJS Fallback if raw WebSocket fails
-      // webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
       debug: (str) => console.log('STOMP: ' + str),
       reconnectDelay: 5000,
       onConnect: () => {
         setIsLive(true);
-        
-        // Subscribe to this specific document's topic
         client.subscribe(`/topic/documents/${resolvedParams.docid}`, (message) => {
           const payload = JSON.parse(message.body);
-          
-          // Only update UI if the message came from someone else!
           if (payload.senderId !== user.id) {
             if (payload.title !== undefined) setTitle(payload.title);
             if (payload.content !== undefined) setContent(payload.content);
@@ -85,9 +85,9 @@ export default function DocumentEditorPage({
     };
   }, [isInitialized, resolvedParams.docid, user]);
 
-  // The DB Auto-Save Effect (Preserved exactly as you had it)
+  // DB Auto-Save Effect (Only runs if user can Edit)
   useEffect(() => {
-    if (!document || !isInitialized) return;
+    if (!canEdit || !document || !isInitialized) return;
     if (debouncedTitle === document.title && debouncedContent === document.content) return;
 
     const performAutoSave = async () => {
@@ -103,19 +103,19 @@ export default function DocumentEditorPage({
     };
 
     performAutoSave();
-  }, [debouncedTitle, debouncedContent, document, saveDocument, isInitialized]);
+  }, [debouncedTitle, debouncedContent, document, saveDocument, isInitialized, canEdit]);
 
   const handleBack = async () => {
-    if (document && (title !== document.title || content !== document.content)) {
+    if (canEdit && document && (title !== document.title || content !== document.content)) {
       setSaveStatus('saving');
       await saveDocument({ title, content }); 
     }
     router.push(`/workspaces/${resolvedParams.id}`);
   };
 
-  // Helper to publish changes out to teammates
+  // Helper to publish changes out to teammates (Blocked if Viewer)
   const broadcastChange = (newTitle: string, newContent: string) => {
-    if (stompClient && stompClient.connected && user) {
+    if (canEdit && stompClient && stompClient.connected && user) {
       stompClient.publish({
         destination: `/app/documents/${resolvedParams.docid}/edit`,
         body: JSON.stringify({
@@ -154,19 +154,19 @@ export default function DocumentEditorPage({
               <input 
                 type="text" 
                 value={title}
+                disabled={!canEdit}
                 onChange={(e) => {
                   const newTitle = e.target.value;
                   setTitle(newTitle);
                   broadcastChange(newTitle, content);
                 }}
-                className="text-xl font-bold text-gray-900 bg-transparent outline-none border-b border-transparent hover:border-gray-300 focus:border-blue-500 transition-colors px-1"
+                className="text-xl font-bold text-gray-900 bg-transparent outline-none border-b border-transparent hover:border-gray-300 focus:border-blue-500 transition-colors px-1 disabled:opacity-80 disabled:hover:border-transparent"
                 placeholder="Document Title"
               />
             </div>
           </div>
           
           <div className="px-4 py-2 text-sm font-medium flex items-center gap-4 text-gray-500">
-            {/* Live Indicator */}
             {isLive ? (
               <span className="flex items-center gap-2 text-green-600 bg-green-50 px-2 py-1 rounded-full text-xs border border-green-200">
                 <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
@@ -179,13 +179,13 @@ export default function DocumentEditorPage({
               </span>
             )}
 
-            {saveStatus === 'saving' && (
+            {canEdit && saveStatus === 'saving' && (
                <span className="flex items-center gap-2">
                  <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
                  Saving...
                </span>
             )}
-            {saveStatus === 'saved' && (
+            {canEdit && saveStatus === 'saved' && (
                <span className="flex items-center gap-2 text-green-600">
                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                  Saved to cloud
@@ -198,6 +198,7 @@ export default function DocumentEditorPage({
           {isInitialized && (
             <RichTextEditor 
               content={content} 
+              editable={canEdit}
               onChange={(newHtml) => {
                 setContent(newHtml);
                 broadcastChange(title, newHtml);
