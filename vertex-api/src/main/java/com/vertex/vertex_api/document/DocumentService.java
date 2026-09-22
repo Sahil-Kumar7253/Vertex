@@ -8,6 +8,7 @@ import com.vertex.vertex_api.workspace.MemberStatus;
 import com.vertex.vertex_api.workspace.Role;
 import com.vertex.vertex_api.workspace.WorkspaceMemberRepository;
 import com.vertex.vertex_api.workspace.WorkspaceRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -99,6 +100,24 @@ public class DocumentService {
 
         Document updatedDocument = documentRepository.save(document);
         return mapToDto(updatedDocument);
+    }
+
+    @Transactional
+    public void deleteDocument(UUID workspaceId, UUID documentId, User currentUser) {
+        // 1. Verify the user is an ADMIN or EDITOR
+        validateAccess(workspaceId, currentUser, true);
+
+        // 2. Find the document
+        Document document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new RuntimeException("Document not found"));
+
+        // 3. Ensure it actually belongs to this workspace
+        if(!document.getWorkspace().getId().equals(workspaceId)) {
+            throw new RuntimeException("Document does not belong to this workspace");
+        }
+
+        // 4. Delete it
+        documentRepository.delete(document);
     }
 
     private DocumentResponseDto mapToDto(Document document){

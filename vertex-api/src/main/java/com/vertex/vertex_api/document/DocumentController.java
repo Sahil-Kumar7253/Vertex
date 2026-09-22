@@ -5,13 +5,7 @@ import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.vertex.vertex_api.user.User;
 
@@ -59,6 +53,16 @@ public class DocumentController {
             @AuthenticationPrincipal User currentUser
     ) {
         return ResponseEntity.ok(documentService.updateDocument(workspaceId, documentId, request, currentUser));
+    }
+
+    @DeleteMapping("/{documentId}")
+    public ResponseEntity<Void> deleteDocument(
+            @PathVariable UUID workspaceId,
+            @PathVariable UUID documentId,
+            @AuthenticationPrincipal User currentUser
+    ) {
+        documentService.deleteDocument(workspaceId, documentId, currentUser);
+        return ResponseEntity.ok().build();
     }
 
 }
