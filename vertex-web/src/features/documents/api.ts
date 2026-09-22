@@ -21,5 +21,9 @@ export const documentApi = {
     updateDocument: async (workspaceId: string, documentId: string, data: DocumentRequestDto): Promise<Document> => {
         const response = await api.put<Document>(`/workspaces/${workspaceId}/documents/${documentId}`, data);
         return response.data;
-    }
+    },
+
+    deleteDocument: async (workspaceId: string, documentId: string): Promise<void> => {
+        await api.delete(`/workspaces/${workspaceId}/documents/${documentId}`);
+    },
 }
